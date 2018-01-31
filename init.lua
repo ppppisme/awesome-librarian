@@ -27,6 +27,13 @@ local naughty = require("naughty")
 
 return {
   __libraries = { },
+  verbose = false,
+
+  __notify = function(self, options)
+    if (not self.verbose) then return end
+
+    return naughty.notify(options)
+  end,
 
   __spawn_synchronously = function(self, command)
     local handle = io.popen(command)
@@ -62,7 +69,7 @@ return {
 
     awful.spawn.easy_async(command, function(stdout, stderr, reason, exit_code)
       if (exit_code ~= 0) then
-        naughty.notify({
+        self:__notify({
             preset = naughty.config.presets.critical,
             title = "Librarian",
             text = stderr,
@@ -93,7 +100,7 @@ return {
   end,
 
   clean = function(self)
-    naughty.notify({
+    self:__notify({
         title = "Librarian",
         text = "Removing not used libraries...",
       })
@@ -109,7 +116,7 @@ return {
 
       for dir in dir_list:gmatch("(.-)%c") do
         if (not self:__has_item(self.__libraries, dir)) then
-          naughty.notify({
+          self.__notify({
               title = "Librarian",
               text = "Removing " .. dir .. "...",
             })
@@ -128,7 +135,7 @@ return {
     table.insert(self.__libraries, library_name)
 
     if (not self:is_installed(library_name)) then
-      local notification = naughty.notify({
+      local notification = self.__notify({
           title = "Librarian",
           text = "Installing " .. library_name .. " library. This message will disappear when the process is done.",
           timeout = 0,
@@ -144,5 +151,9 @@ return {
     package.path = config_dir .. "libraries/" .. author .. "/?.lua;" .. package.path
 
     return require('libraries/' .. library_name)
+  end,
+
+  init = function(self, options)
+    self.verbose = options.verbose or false
   end,
 }
