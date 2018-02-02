@@ -112,7 +112,7 @@ return {
       })
 
     self.__git:pull(library_name, function(stdout)
-      local message = library_name .. " was updated!"
+      local message = library_name .. " was updated."
       if (stdout:gsub("%c", "") == "Already up to date.") then
         message = library_name .. " is up to date."
       end
@@ -187,12 +187,13 @@ return {
     if (not self:is_installed(library_name)) then
       local notification = self:__notify({
           title = "Librarian",
-          text = "Installing " .. library_name .. " library. This message will disappear when the process is done.",
+          text = "Installing " .. library_name .. " library...",
           timeout = 0,
         })
 
       self.__git:clone(library_name, function()
-        naughty.destroy(notification)
+        naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
+        naughty.reset_timeout(notification, 5)
       end)
 
       if (options.reference ~= "master") then
