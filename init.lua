@@ -65,37 +65,55 @@ return {
   __git = {
     __libraries_path = "",
 
-    clone = function(self, library_name)
+    clone = function(self, library_name, callback)
       local path_to_library = self.__libraries_path .. library_name .. "/"
 
       local command ="git clone https://github.com/" .. library_name .. ".git"
 
       command = command .. " " .. path_to_library
+      if (callback) then
+        awful.spawn.easy_async_with_shell(command, callback)
+
+        return
+      end
       awful.spawn.with_shell(command)
     end,
 
-    checkout = function(self, library_name, reference)
+    checkout = function(self, library_name, reference, callback)
       local path_to_library = self.__libraries_path .. library_name .. "/"
 
       local command = "cd " .. path_to_library .. " && git checkout " .. reference
+      if (callback) then
+        awful.spawn.easy_async_with_shell(command, callback)
+
+        return
+      end
       awful.spawn.with_shell(command)
     end,
 
-    pull = function(self, library_name)
+    pull = function(self, library_name, callback)
       local path_to_library = self.__libraries_path .. library_name .. "/"
 
       local command = "cd " .. path_to_library .. " && git pull"
+      if (callback) then
+        awful.spawn.easy_async_with_shell(command, callback)
+
+        return
+      end
       awful.spawn.with_shell(command)
     end,
   },
 
   update = function(self, library_name)
-    self:__notify({
+    local notification = self:__notify({
         title = "Librarian",
         text = "Updating " .. library_name .. "...",
+        timeout = 0,
       })
 
-    self.__git:pull(library_name)
+    self.__git:pull(library_name, function()
+      naughty.destroy(notification)
+    end)
   end,
 
   update_all = function(self)
@@ -139,6 +157,7 @@ return {
           self.__notify({
               title = "Librarian",
               text = "Removing " .. dir .. "...",
+              timeout = 1,
             })
           self:__remove_file_or_dir(libraries_dir .. dir)
 
@@ -161,11 +180,16 @@ return {
     end
 
     if (not self:is_installed(library_name)) then
-      self.__notify({
+      local notification = self.__notify({
           title = "Librarian",
           text = "Installing " .. library_name .. " library. This message will disappear when the process is done.",
+          timeout = 0,
         })
-      self.__git:clone(library_name)
+
+      self.__git:clone(library_name, function()
+        naughty.destroy(notification)
+      end)
+
       if (options.reference ~= "master") then
         self.__git:checkout(library_name, options.reference)
       end
@@ -173,7 +197,6 @@ return {
       return nil
     end
 
-    local reference = options.reference or "master"
     self.__git:checkout(library_name, options.reference)
 
     local config_dir = gears.filesystem.get_configuration_dir()
