@@ -62,27 +62,28 @@ return {
     return false
   end,
 
-  __download = function(self, library_name, notification)
-    local config_dir = gears.filesystem.get_configuration_dir()
-    local command ="git clone https://github.com/" .. library_name .. ".git"
-    command = command .. " " .. config_dir .. "libraries/" .. library_name .. "/"
+  __git = {
+    clone = function(self, library_name, options)
+      local config_dir = gears.filesystem.get_configuration_dir()
+      local path_to_library = config_dir .. "libraries/" .. library_name .. "/"
 
-    awful.spawn.easy_async(command, function(stdout, stderr, reason, exit_code)
-      if (exit_code ~= 0) then
-        self:__notify({
-            preset = naughty.config.presets.critical,
-            title = "Librarian",
-            text = stderr,
-          })
+      local command ="git clone https://github.com/" .. library_name .. ".git"
+      if (options.reference) then
+        self:checkout(library_name, options.reference)
       end
 
-      if (notification == nil) then
-        return
-      end
+      command = command .. " " .. path_to_library
+      awful.spawn.with_shell(command)
+    end,
 
-      naughty.destroy(notification)
-    end)
-  end,
+    checkout = function(self, library_name, reference)
+      local config_dir = gears.filesystem.get_configuration_dir()
+      local path_to_library = config_dir .. "libraries/" .. library_name .. "/"
+
+      local command = "cd " .. path_to_library .. " && git checkout " .. reference
+      awful.spawn.with_shell(command)
+    end,
+  },
 
   is_installed = function(self, library_name)
     -- @see https://stackoverflow.com/a/40195356
@@ -131,19 +132,28 @@ return {
     end)
   end,
 
-  require = function(self, library_name)
+  require = function(self, library_name, options)
     table.insert(self.__libraries, library_name)
 
+    if (not options) then
+      options = {
+        reference = "master",
+      }
+    end
+
     if (not self:is_installed(library_name)) then
-      local notification = self.__notify({
+      self.__notify({
           title = "Librarian",
           text = "Installing " .. library_name .. " library. This message will disappear when the process is done.",
           timeout = 0,
         })
-      self:__download(library_name, notification)
+      self.__git:clone(library_name, options)
 
       return nil
     end
+
+    local reference = options.reference or "master"
+    self.__git:checkout(library_name, options.reference)
 
     local config_dir = gears.filesystem.get_configuration_dir()
     local author = string.match(library_name, "[^/]+")
