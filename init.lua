@@ -154,7 +154,7 @@ return {
 
       for dir in dir_list:gmatch("(.-)%c") do
         if (not self:__has_item(self.__libraries, dir)) then
-          self.__notify({
+          self:__notify({
               title = "Librarian",
               text = "Removing " .. dir .. "...",
               timeout = 1,
@@ -180,7 +180,7 @@ return {
     end
 
     if (not self:is_installed(library_name)) then
-      local notification = self.__notify({
+      local notification = self:__notify({
           title = "Librarian",
           text = "Installing " .. library_name .. " library. This message will disappear when the process is done.",
           timeout = 0,
