@@ -166,6 +166,9 @@ return {
           text = "Installing " .. library_name .. " library. This message will disappear when the process is done.",
         })
       self.__git:clone(library_name)
+      if (options.reference ~= "master") then
+        self.__git:checkout(library_name, options.reference)
+      end
 
       return nil
     end
