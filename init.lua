@@ -111,8 +111,13 @@ return {
         timeout = 0,
       })
 
-    self.__git:pull(library_name, function()
-      naughty.destroy(notification)
+    self.__git:pull(library_name, function(stdout)
+      local message = library_name .. " was updated!"
+      if (stdout:gsub("%c", "") == "Already up to date.") then
+        message = library_name .. " is up to date."
+      end
+      naughty.replace_text(notification, "Librarian", message)
+      naughty.reset_timeout(notification, 5)
     end)
   end,
 
