@@ -63,27 +63,46 @@ return {
   end,
 
   __git = {
-    clone = function(self, library_name, options)
-      local config_dir = gears.filesystem.get_configuration_dir()
-      local path_to_library = config_dir .. "libraries/" .. library_name .. "/"
+    __libraries_path = "",
+
+    clone = function(self, library_name)
+      local path_to_library = self.__libraries_path .. library_name .. "/"
 
       local command ="git clone https://github.com/" .. library_name .. ".git"
-      if (options.reference) then
-        self:checkout(library_name, options.reference)
-      end
 
       command = command .. " " .. path_to_library
       awful.spawn.with_shell(command)
     end,
 
     checkout = function(self, library_name, reference)
-      local config_dir = gears.filesystem.get_configuration_dir()
-      local path_to_library = config_dir .. "libraries/" .. library_name .. "/"
+      local path_to_library = self.__libraries_path .. library_name .. "/"
 
       local command = "cd " .. path_to_library .. " && git checkout " .. reference
       awful.spawn.with_shell(command)
     end,
+
+    pull = function(self, library_name)
+      local path_to_library = self.__libraries_path .. library_name .. "/"
+
+      local command = "cd " .. path_to_library .. " && git pull"
+      awful.spawn.with_shell(command)
+    end,
   },
+
+  update = function(self, library_name)
+    self:__notify({
+        title = "Librarian",
+        text = "Updating " .. library_name .. "...",
+      })
+
+    self.__git:pull(library_name)
+  end,
+
+  update_all = function(self)
+    for _, library_name in pairs(self.__libraries) do
+      self:update(library_name)
+    end
+  end,
 
   is_installed = function(self, library_name)
     -- @see https://stackoverflow.com/a/40195356
@@ -145,9 +164,8 @@ return {
       self.__notify({
           title = "Librarian",
           text = "Installing " .. library_name .. " library. This message will disappear when the process is done.",
-          timeout = 0,
         })
-      self.__git:clone(library_name, options)
+      self.__git:clone(library_name)
 
       return nil
     end
@@ -165,5 +183,8 @@ return {
 
   init = function(self, options)
     self.verbose = options.verbose or false
+
+    local libraries_path = gears.filesystem.get_configuration_dir() .. "libraries/"
+    self.__git.__libraries_path = libraries_path
   end,
 }
