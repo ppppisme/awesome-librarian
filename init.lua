@@ -24,6 +24,7 @@
 local awful = require("awful")
 local gears = require("gears")
 local naughty = require("naughty")
+local git = require("libraries.librarian.git")
 
 local librarian = {}
 
@@ -63,48 +64,6 @@ local has_item = function(table, wanted_item)
   return false
 end
 
-local git = {
-  __libraries_path = "",
-
-  clone = function(self, library_name, callback)
-    local path_to_library = self.__libraries_path .. library_name .. "/"
-
-    local command ="git clone https://github.com/" .. library_name .. ".git"
-
-    command = command .. " " .. path_to_library
-    if (callback) then
-      awful.spawn.easy_async_with_shell(command, callback)
-
-      return
-    end
-    awful.spawn.with_shell(command)
-  end,
-
-  checkout = function(self, library_name, reference, callback)
-    local path_to_library = self.__libraries_path .. library_name .. "/"
-
-    local command = "cd " .. path_to_library .. " && git checkout " .. reference
-    if (callback) then
-      awful.spawn.easy_async_with_shell(command, callback)
-
-      return
-    end
-    awful.spawn.with_shell(command)
-  end,
-
-  pull = function(self, library_name, callback)
-    local path_to_library = self.__libraries_path .. library_name .. "/"
-
-    local command = "cd " .. path_to_library .. " && git pull"
-    if (callback) then
-      awful.spawn.easy_async_with_shell(command, callback)
-
-      return
-    end
-    awful.spawn.with_shell(command)
-  end,
-}
-
 function librarian.update(library_name)
   local notification = notify({
       title = "Librarian",
@@ -112,7 +71,7 @@ function librarian.update(library_name)
       timeout = 0,
     })
 
-  git:pull(library_name, function(stdout)
+  git.pull(library_name, function(stdout)
     local message = library_name .. " was updated."
     if (stdout:gsub("%c", "") == "Already up to date.") then
       message = library_name .. " is up to date."
@@ -192,13 +151,13 @@ function librarian.require(library_name, options)
         timeout = 0,
       })
 
-    git:clone(library_name, function()
+    git.clone(library_name, function()
       naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
       naughty.reset_timeout(notification, 5)
     end)
 
     if (options.reference ~= "master") then
-      git:checkout(library_name, options.reference)
+      git.checkout(library_name, options.reference)
     end
 
     return nil
@@ -216,7 +175,7 @@ function librarian.init(options)
   verbose = options.verbose or false
 
   local libraries_path = gears.filesystem.get_configuration_dir() .. "libraries/"
-  git.__libraries_path = libraries_path
+  git.init({libraries_path = libraries_path})
 end
 
 return librarian
