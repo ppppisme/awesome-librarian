@@ -90,7 +90,7 @@ end
 function librarian.is_installed(library_name)
   -- @see https://stackoverflow.com/a/40195356
   local exists = function (file)
-    local ok, err, code = os.rename(file, file)
+    local ok, _, code = os.rename(file, file)
     if not ok then
       if code == 13 then return true end
     end
@@ -118,7 +118,7 @@ function librarian.clean()
     local dir_list = stdout:gsub("%./", "")
 
     for dir in dir_list:gmatch("(.-)%c") do
-      if (not has_item(self.__libraries, dir)) then
+      if (not has_item(libraries, dir)) then
         notify({
             title = "Librarian",
             text = "Removing " .. dir .. "...",
@@ -135,6 +135,22 @@ function librarian.clean()
   end)
 end
 
+function librarian.install(library_name, options)
+  local notification = notify({
+      title = "Librarian",
+      text = "Installing " .. library_name .. " library...",
+      timeout = 0,
+    })
+
+  git.clone(library_name, function()
+    naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
+    naughty.reset_timeout(notification, 5)
+  end)
+
+  local ref = options.reference or "master"
+  git.checkout(library_name, ref)
+end
+
 function librarian.require(library_name, options)
   table.insert(libraries, library_name)
 
@@ -145,20 +161,7 @@ function librarian.require(library_name, options)
   end
 
   if (not librarian.is_installed(library_name)) then
-    local notification = notify({
-        title = "Librarian",
-        text = "Installing " .. library_name .. " library...",
-        timeout = 0,
-      })
-
-    git.clone(library_name, function()
-      naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
-      naughty.reset_timeout(notification, 5)
-    end)
-
-    if (options.reference ~= "master") then
-      git.checkout(library_name, options.reference)
-    end
+    librarian.install(library_name, options)
 
     return nil
   end
