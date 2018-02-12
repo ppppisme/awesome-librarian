@@ -185,14 +185,14 @@ function librarian.require_async(library_name, options, callback)
         callback(library)
       end
     end)
+
+    return nil
   end
 
   git.checkout(library_name, options.reference or "master", function()
     local library = require('libraries/' .. library_name)
     callback(library)
   end)
-
-  return nil
 end
 
 function librarian.require(library_name, options)
