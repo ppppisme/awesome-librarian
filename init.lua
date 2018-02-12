@@ -71,6 +71,37 @@ local add_to_package_path = function(library_name)
   package.path = config_dir .. "libraries/" .. author .. "/?.lua;" .. package.path
 end
 
+local function install_async(library_name, options, callback)
+  local notification = notify({
+      title = "Librarian",
+      text = "Installing " .. library_name .. " library...",
+      timeout = 0,
+    })
+
+  git.clone(library_name, function()
+    naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
+    naughty.reset_timeout(notification, 5)
+    git.checkout(library_name, options.reference or "master")
+    if (callback ~= "async") then
+      callback()
+    end
+  end)
+end
+
+local function install(library_name, options)
+  local notification = notify({
+      title = "Librarian",
+      text = "Installing " .. library_name .. " library...",
+      timeout = 0,
+    })
+
+  git.clone(library_name)
+  git.checkout(library_name, options.reference or "master")
+
+  naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
+  naughty.reset_timeout(notification, 5)
+end
+
 function librarian.update(library_name)
   local notification = notify({
       title = "Librarian",
@@ -142,37 +173,37 @@ function librarian.clean()
   end)
 end
 
-function librarian.install(library_name, options)
-  local notification = notify({
-      title = "Librarian",
-      text = "Installing " .. library_name .. " library...",
-      timeout = 0,
-    })
+function librarian.require_async(library_name, options, callback)
+  table.insert(libraries, library_name)
+  options = options or {}
+  callback = callback or "async"
 
-  git.clone(library_name, function()
-    naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
-    naughty.reset_timeout(notification, 5)
+  if (not librarian.is_installed(library_name)) then
+    install_async(library_name, options, function()
+      local library = require('libraries/' .. library_name)
+      if (callback ~= "async") then
+        callback(library)
+      end
+    end)
+  end
+
+  git.checkout(library_name, options.reference or "master", function()
+    local library = require('libraries/' .. library_name)
+    callback(library)
   end)
 
-  local ref = options.reference or "master"
-  git.checkout(library_name, ref)
+  return nil
 end
 
 function librarian.require(library_name, options)
   table.insert(libraries, library_name)
-
-  if (not options) then
-    options = {
-      reference = "master",
-    }
-  end
+  options = options or {}
 
   if (not librarian.is_installed(library_name)) then
-    librarian.install(library_name, options)
-
-    return nil
+    install(library_name, options)
   end
 
+  git.checkout(library_name, options.reference or "master")
   add_to_package_path(library_name)
 
   return require('libraries/' .. library_name)
