@@ -64,6 +64,13 @@ local has_item = function(table, wanted_item)
   return false
 end
 
+local add_to_package_path = function(library_name)
+  local config_dir = gears.filesystem.get_configuration_dir()
+  local author = string.match(library_name, "[^/]+")
+  package.path = config_dir .. "libraries/" .. author .. "/?/init.lua;" .. package.path
+  package.path = config_dir .. "libraries/" .. author .. "/?.lua;" .. package.path
+end
+
 function librarian.update(library_name)
   local notification = notify({
       title = "Librarian",
@@ -166,10 +173,7 @@ function librarian.require(library_name, options)
     return nil
   end
 
-  local config_dir = gears.filesystem.get_configuration_dir()
-  local author = string.match(library_name, "[^/]+")
-  package.path = config_dir .. "libraries/" .. author .. "/?/init.lua;" .. package.path
-  package.path = config_dir .. "libraries/" .. author .. "/?.lua;" .. package.path
+  add_to_package_path(library_name)
 
   return require('libraries/' .. library_name)
 end
