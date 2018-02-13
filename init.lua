@@ -147,9 +147,9 @@ function librarian.clean()
       text = "Removing not used libraries...",
     })
 
-  local libraries_dir = gears.filesystem.get_configuration_dir() .. libraries_dir
+  local libraries_path = gears.filesystem.get_configuration_dir() .. libraries_dir
 
-  local find_command = "cd " .. libraries_dir .. " && "
+  local find_command = "cd " .. libraries_path .. " && "
   find_command = find_command .. "find -mindepth 2 -maxdepth 2 -type d"
 
   awful.spawn.easy_async_with_shell(find_command, function(stdout)
@@ -163,9 +163,9 @@ function librarian.clean()
             text = "Removing " .. dir .. "...",
             timeout = 1,
           })
-        remove_file_or_dir(libraries_dir .. dir)
+        remove_file_or_dir(libraries_path .. dir)
 
-        local parent_dir = libraries_dir .. dir:gsub("[^/]+$", "")
+        local parent_dir = libraries_path .. dir:gsub("[^/]+$", "")
         if (dir_is_empty(parent_dir)) then
           remove_file_or_dir(parent_dir)
         end
