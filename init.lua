@@ -29,12 +29,22 @@ local git = require("libraries.librarian.git")
 local librarian = {}
 
 local libraries = {}
+local libraries_dir = ""
 local verbose = false;
 
 local notify = function(options)
   if (not verbose) then return end
 
   return naughty.notify(options)
+end
+
+-- @see https://stackoverflow.com/a/40195356
+local exists = function (file)
+  local ok, _, code = os.rename(file, file)
+  if not ok then
+    if code == 13 then return true end
+  end
+  return ok
 end
 
 local spawn_synchronously = function(command)
@@ -67,8 +77,8 @@ end
 local add_to_package_path = function(library_name)
   local config_dir = gears.filesystem.get_configuration_dir()
   local author = string.match(library_name, "[^/]+")
-  package.path = config_dir .. "libraries/" .. author .. "/?/init.lua;" .. package.path
-  package.path = config_dir .. "libraries/" .. author .. "/?.lua;" .. package.path
+  package.path = config_dir .. libraries_dir .. author .. "/?/init.lua;" .. package.path
+  package.path = config_dir .. libraries_dir .. author .. "/?.lua;" .. package.path
 end
 
 local function install_async(library_name, options, callback)
@@ -126,18 +136,9 @@ function librarian.update_all()
 end
 
 function librarian.is_installed(library_name)
-  -- @see https://stackoverflow.com/a/40195356
-  local exists = function (file)
-    local ok, _, code = os.rename(file, file)
-    if not ok then
-      if code == 13 then return true end
-    end
-    return ok
-  end
-
   local config_dir = gears.filesystem.get_configuration_dir()
 
-  return exists(config_dir .. "libraries/" .. library_name .. "/init.lua")
+  return exists(config_dir .. libraries_dir .. library_name .. "/init.lua")
 end
 
 function librarian.clean()
@@ -146,7 +147,7 @@ function librarian.clean()
       text = "Removing not used libraries...",
     })
 
-  local libraries_dir = gears.filesystem.get_configuration_dir() .. "libraries/"
+  local libraries_dir = gears.filesystem.get_configuration_dir() .. libraries_dir
 
   local find_command = "cd " .. libraries_dir .. " && "
   find_command = find_command .. "find -mindepth 2 -maxdepth 2 -type d"
@@ -180,7 +181,7 @@ function librarian.require_async(library_name, options, callback)
 
   if (not librarian.is_installed(library_name)) then
     install_async(library_name, options, function()
-      local library = require('libraries/' .. library_name)
+      local library = require(libraries_dir .. library_name)
       if (callback ~= "async") then
         callback(library)
       end
@@ -190,7 +191,7 @@ function librarian.require_async(library_name, options, callback)
   end
 
   git.checkout(library_name, options.reference or "master", function()
-    local library = require('libraries/' .. library_name)
+    local library = require(libraries_dir .. library_name)
     callback(library)
   end)
 end
@@ -206,13 +207,17 @@ function librarian.require(library_name, options)
   git.checkout(library_name, options.reference or "master")
   add_to_package_path(library_name)
 
-  return require('libraries/' .. library_name)
+  return require(libraries_dir .. library_name)
 end
 
 function librarian.init(options)
   verbose = options.verbose or false
+  libraries_dir = options.libraries_dir or "libraries/"
 
-  local libraries_path = gears.filesystem.get_configuration_dir() .. "libraries/"
+  local libraries_path = gears.filesystem.get_configuration_dir() .. libraries_dir .. "/"
+  if (not exists(libraries_path)) then
+    os.execute("mkdir -p " .. libraries_path)
+  end
   git.init({libraries_path = libraries_path})
 end
 
