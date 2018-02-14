@@ -24,7 +24,7 @@
 local awful = require("awful")
 local gears = require("gears")
 local naughty = require("naughty")
-local git = require("libraries.librarian.git")
+local git = require("librarian.git")
 
 local librarian = {}
 
