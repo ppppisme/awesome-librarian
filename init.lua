@@ -179,6 +179,8 @@ function librarian.require_async(library_name, options, callback)
   libraries[library_name] = options
   callback = callback or "async"
 
+  add_to_package_path(library_name)
+
   if (not librarian.is_installed(library_name)) then
     install_async(library_name, options, function()
       local library = require(libraries_dir .. library_name)
