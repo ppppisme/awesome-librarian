@@ -194,7 +194,9 @@ function librarian.require_async(library_name, options, callback)
 
   git.checkout(library_name, options.reference or "master", function()
     local library = require(libraries_dir .. library_name)
-    callback(library)
+    if (callback ~= "async") then
+      callback(library)
+    end
   end)
 end
 
