@@ -64,9 +64,9 @@ local remove_file_or_dir = function(path)
   os.execute("rm -rf " .. path)
 end
 
-local has_item = function(table, wanted_item)
-  for _, item in pairs(table) do
-    if (item == wanted_item) then
+local has_key = function(table, wanted_key)
+  for key, _ in pairs(table) do
+    if (key == wanted_key) then
       return true
     end
   end
@@ -130,7 +130,7 @@ function librarian.update(library_name)
 end
 
 function librarian.update_all()
-  for _, library_name in pairs(libraries) do
+  for library_name, _ in pairs(libraries) do
     librarian.update(library_name)
   end
 end
@@ -157,7 +157,7 @@ function librarian.clean()
     local dir_list = stdout:gsub("%./", "")
 
     for dir in dir_list:gmatch("(.-)%c") do
-      if (not has_item(libraries, dir)) then
+      if (not has_key(libraries, dir)) then
         notify({
             title = "Librarian",
             text = "Removing " .. dir .. "...",
@@ -175,8 +175,8 @@ function librarian.clean()
 end
 
 function librarian.require_async(library_name, options, callback)
-  table.insert(libraries, library_name)
   options = options or {}
+  libraries[library_name] = options
   callback = callback or "async"
 
   if (not librarian.is_installed(library_name)) then
@@ -197,8 +197,9 @@ function librarian.require_async(library_name, options, callback)
 end
 
 function librarian.require(library_name, options)
-  table.insert(libraries, library_name)
   options = options or {}
+
+  libraries[library_name] = options
 
   if (not librarian.is_installed(library_name)) then
     install(library_name, options)
