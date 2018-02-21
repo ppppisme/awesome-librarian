@@ -12,8 +12,11 @@ local spawn_synchronously = function(command)
   return output
 end
 
-function git.clone(library_name, callback)
-  local command ="git clone https://github.com/" .. library_name .. ".git"
+function git.clone(library_name, url, callback)
+  local command = "git clone "
+  url = url or "https://github.com/" .. library_name .. ".git"
+  command = command .. url
+
   local path_to_library = libraries_path .. library_name .. "/"
   command = command .. " " .. path_to_library
   if (callback) then
