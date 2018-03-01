@@ -174,35 +174,30 @@ function librarian.clean()
   end)
 end
 
-function librarian.require_async(library_name, options, callback)
+function librarian.require_async(library_name, options)
   options = options or {}
   libraries[library_name] = options
-  callback = callback or "async"
+  local do_after_callback = options["do_after"]
+
+  local install_callback = function()
+    local library = require(libraries_dir .. library_name)
+    if (do_after_callback) then
+      do_after_callback(library)
+    end
+  end
 
   add_to_package_path(library_name)
-
   if (not librarian.is_installed(library_name)) then
-    install_async(library_name, options, function()
-      local library = require(libraries_dir .. library_name)
-      if (callback ~= "async") then
-        callback(library)
-      end
-    end)
+    install_async(library_name, options, install_callback)
 
     return nil
   end
 
-  git.checkout(library_name, options.reference or "master", function()
-    local library = require(libraries_dir .. library_name)
-    if (callback ~= "async") then
-      callback(library)
-    end
-  end)
+  git.checkout(library_name, options.reference or "master", install_callback)
 end
 
 function librarian.require(library_name, options)
   options = options or {}
-
   libraries[library_name] = options
 
   if (not librarian.is_installed(library_name)) then
@@ -212,7 +207,13 @@ function librarian.require(library_name, options)
   git.checkout(library_name, options.reference or "master")
   add_to_package_path(library_name)
 
-  return require(libraries_dir .. library_name)
+  local library = require(libraries_dir .. library_name)
+  local do_after_callback = options["do_after"]
+  if (do_after_callback) then
+    do_after_callback(library)
+  end
+
+  return library
 end
 
 function librarian.init(options)
