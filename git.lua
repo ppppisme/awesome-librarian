@@ -20,11 +20,7 @@ function git.clone(library_name, url, callback)
   local path_to_library = libraries_path .. library_name .. "/"
   command = command .. " " .. path_to_library
   if (callback) then
-    if (callback == "async") then
-      awful.spawn.with_shell(command)
-    else
-      awful.spawn.easy_async_with_shell(command, callback)
-    end
+    awful.spawn.easy_async_with_shell(command, callback)
 
     return
   end
@@ -35,11 +31,7 @@ function git.checkout(library_name, reference, callback)
   local path_to_library = libraries_path .. library_name .. "/"
   local command = "cd " .. path_to_library .. " && git checkout " .. reference
   if (callback) then
-    if (callback == "async") then
-      awful.spawn.with_shell(command)
-    else
-      awful.spawn.easy_async_with_shell(command, callback)
-    end
+    awful.spawn.easy_async_with_shell(command, callback)
 
     return
   end
@@ -50,11 +42,7 @@ function git.pull(library_name, callback)
   local path_to_library = libraries_path .. library_name .. "/"
   local command = "cd " .. path_to_library .. " && git pull"
   if (callback) then
-    if (callback == "async") then
-      awful.spawn.with_shell(command)
-    else
-      awful.spawn.easy_async_with_shell(command, callback)
-    end
+    awful.spawn.easy_async_with_shell(command, callback)
 
     return
   end

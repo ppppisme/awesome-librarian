@@ -92,9 +92,7 @@ local function install_async(library_name, options, callback)
     naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
     naughty.reset_timeout(notification, 5)
     git.checkout(library_name, options.reference or "master")
-    if (callback ~= "async") then
-      callback()
-    end
+    callback()
   end)
 end
 
@@ -106,7 +104,6 @@ local function install(library_name, options)
     })
 
   git.clone(library_name, options.url)
-  git.checkout(library_name, options.reference or "master")
 
   naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
   naughty.reset_timeout(notification, 5)
