@@ -138,7 +138,7 @@ function librarian.is_installed(library_name)
   return exists(config_dir .. libraries_dir .. library_name .. "/init.lua")
 end
 
-function librarian.clean()
+function librarian.remove_unused()
   notify({
       title = "Librarian",
       text = "Removing not used libraries...",
