@@ -23,20 +23,12 @@
 
 local awful = require("awful")
 local gears = require("gears")
-local naughty = require("naughty")
 local git = require("librarian.git")
 
 local librarian = {}
 
 local libraries = {}
 local libraries_dir = ""
-local verbose = false;
-
-local notify = function(options)
-  if (not verbose) then return end
-
-  return naughty.notify(options)
-end
 
 -- @see https://stackoverflow.com/a/40195356
 local exists = function (file)
@@ -55,6 +47,8 @@ local spawn_synchronously = function(command)
 
   return output
 end
+
+local notifier = {}
 
 local dir_is_empty = function(dir_path)
   return spawn_synchronously("ls -A " .. dir_path) == ""
@@ -82,22 +76,22 @@ local add_to_package_path = function(library_name)
 end
 
 local function install_async(library_name, options, callback)
-  local notification = notify({
+  local notification = notifier.notify({
       title = "Librarian",
       text = "Installing " .. library_name .. " library...",
       timeout = 0,
     })
 
   git.clone(library_name, options.url, function()
-    naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
-    naughty.reset_timeout(notification, 5)
+    notifier.replace_text(notification, "Librarian", library_name .. " is installed.")
+    notifier.reset_timeout(notification, 5)
     git.checkout(library_name, options.reference or "master")
     callback()
   end)
 end
 
 local function install(library_name, options)
-  local notification = notify({
+  local notification = notifier.notify({
       title = "Librarian",
       text = "Installing " .. library_name .. " library...",
       timeout = 0,
@@ -105,12 +99,12 @@ local function install(library_name, options)
 
   git.clone(library_name, options.url)
 
-  naughty.replace_text(notification, "Librarian", library_name .. " is installed.")
-  naughty.reset_timeout(notification, 5)
+  notifier.replace_text(notification, "Librarian", library_name .. " is installed.")
+  notifier.reset_timeout(notification, 5)
 end
 
 function librarian.update(library_name)
-  local notification = notify({
+  local notification = notifier.notify({
       title = "Librarian",
       text = "Updating " .. library_name .. "...",
       timeout = 0,
@@ -121,8 +115,8 @@ function librarian.update(library_name)
     if (stdout:gsub("%c", "") == "Already up to date.") then
       message = library_name .. " is up to date."
     end
-    naughty.replace_text(notification, "Librarian", message)
-    naughty.reset_timeout(notification, 5)
+    notifier.replace_text(notification, "Librarian", message)
+    notifier.reset_timeout(notification, 5)
   end)
 end
 
@@ -139,7 +133,7 @@ function librarian.is_installed(library_name)
 end
 
 function librarian.remove_unused()
-  notify({
+  notifier.notify({
       title = "Librarian",
       text = "Removing not used libraries...",
     })
@@ -155,7 +149,7 @@ function librarian.remove_unused()
 
     for dir in dir_list:gmatch("(.-)%c") do
       if (not has_key(libraries, dir)) then
-        notify({
+        notifier.notify({
             title = "Librarian",
             text = "Removing " .. dir .. "...",
             timeout = 1,
@@ -214,13 +208,14 @@ function librarian.require(library_name, options)
 end
 
 function librarian.init(options)
-  verbose = options.verbose or false
   libraries_dir = options.libraries_dir or "libraries/"
+  notifier = options.notify or require('librarian.notifier')
 
   local libraries_path = gears.filesystem.get_configuration_dir() .. libraries_dir .. "/"
   if (not exists(libraries_path)) then
     os.execute("mkdir -p " .. libraries_path)
   end
+
   git.init({libraries_path = libraries_path})
 end
 
