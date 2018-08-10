@@ -23,12 +23,16 @@
 
 local awful = require("awful")
 local gears = require("gears")
-local git = require("librarian.git")
 
 local librarian = {}
 
 local libraries = {}
 local libraries_dir = ""
+
+local library_managers = {
+  require("librarian.git")
+}
+local notifier = {}
 
 -- @see https://stackoverflow.com/a/40195356
 local exists = function (file)
@@ -48,8 +52,6 @@ local spawn_synchronously = function(command)
   return output
 end
 
-local notifier = {}
-
 local dir_is_empty = function(dir_path)
   return spawn_synchronously("ls -A " .. dir_path) == ""
 end
@@ -68,11 +70,14 @@ local has_key = function(table, wanted_key)
   return false
 end
 
+local function determine_library_manager(library)
+  return require("librarian.git")
+end
+
 local add_to_package_path = function(library_name)
-  local config_dir = gears.filesystem.get_configuration_dir()
   local author = string.match(library_name, "[^/]+")
-  package.path = config_dir .. libraries_dir .. author .. "/?/init.lua;" .. package.path
-  package.path = config_dir .. libraries_dir .. author .. "/?.lua;" .. package.path
+  package.path = libraries_dir .. author .. "/?/init.lua;" .. package.path
+  package.path = libraries_dir .. author .. "/?.lua;" .. package.path
 end
 
 local function install_async(library_name, options, callback)
@@ -82,10 +87,12 @@ local function install_async(library_name, options, callback)
       timeout = 0,
     })
 
-  git.clone(library_name, options.url, function()
+  local handler = determine_library_manager(library_name)
+
+  handler.clone(library_name, options.url, function()
     notifier.replace_text(notification, "Librarian", library_name .. " is installed.")
     notifier.reset_timeout(notification, 5)
-    git.checkout(library_name, options.reference or "master")
+    handler.checkout(library_name, options.reference or "master")
     callback()
   end)
 end
@@ -97,7 +104,9 @@ local function install(library_name, options)
       timeout = 0,
     })
 
-  git.clone(library_name, options.url)
+  local handler = determine_library_manager(library_name)
+
+  handler.clone(library_name, options.url)
 
   notifier.replace_text(notification, "Librarian", library_name .. " is installed.")
   notifier.reset_timeout(notification, 5)
@@ -110,7 +119,9 @@ function librarian.update(library_name)
       timeout = 0,
     })
 
-  git.pull(library_name, function(stdout)
+  local handler = determine_library_manager(library_name)
+
+  handler.pull(library_name, function(stdout)
     local message = library_name .. " was updated."
     if (stdout:gsub("%c", "") == "Already up to date.") then
       message = library_name .. " is up to date."
@@ -127,9 +138,7 @@ function librarian.update_all()
 end
 
 function librarian.is_installed(library_name)
-  local config_dir = gears.filesystem.get_configuration_dir()
-
-  return exists(config_dir .. libraries_dir .. library_name .. "/init.lua")
+  return exists(libraries_dir .. library_name .. "/init.lua")
 end
 
 function librarian.remove_unused()
@@ -171,7 +180,7 @@ function librarian.require_async(library_name, options)
   local do_after_callback = options["do_after"]
 
   local install_callback = function()
-    local library = require(libraries_dir .. library_name)
+    local library = require(library_name)
     if (do_after_callback) then
       do_after_callback(library)
     end
@@ -184,7 +193,9 @@ function librarian.require_async(library_name, options)
     return nil
   end
 
-  git.checkout(library_name, options.reference or "master", install_callback)
+  local handler = determine_library_manager(library_name)
+
+  handler.checkout(library_name, options.reference or "master", install_callback)
 end
 
 function librarian.require(library_name, options)
@@ -195,10 +206,12 @@ function librarian.require(library_name, options)
     install(library_name, options)
   end
 
-  git.checkout(library_name, options.reference or "master")
+  local handler = determine_library_manager(library_name)
+  handler.checkout(library_name, options.reference or "master")
   add_to_package_path(library_name)
 
-  local library = require(libraries_dir .. library_name)
+  local library = require(library_name)
+
   local do_after_callback = options["do_after"]
   if (do_after_callback) then
     do_after_callback(library)
@@ -208,15 +221,30 @@ function librarian.require(library_name, options)
 end
 
 function librarian.init(options)
+  if (not options.libraries_dir) then
+    error("'libraries_dir' option is required for librarian initialization")
+  end
   libraries_dir = options.libraries_dir or "libraries/"
-  notifier = options.notify or require('librarian.notifier')
 
-  local libraries_path = gears.filesystem.get_configuration_dir() .. libraries_dir .. "/"
-  if (not exists(libraries_path)) then
-    os.execute("mkdir -p " .. libraries_path)
+  if (not exists(libraries_dir)) then
+    os.execute("mkdir -p " .. libraries_dir)
   end
 
-  git.init({libraries_path = libraries_path})
+  package.path = libraries_dir .. "/?/init.lua;" .. package.path
+
+  notifier = options.notify or require('librarian.notifier')
+
+  if (options.library_managers) then
+    for _, item in pairs(options.library_managers) do
+
+      table.insert(library_managers, item)
+    end
+  end
+
+  -- TODO: do not init all managers, only needed ones.
+  for _, item in pairs(library_managers) do
+    item.init({libraries_dir = libraries_dir})
+  end
 end
 
 return librarian
