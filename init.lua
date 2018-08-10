@@ -22,7 +22,6 @@
 --
 
 local awful = require("awful")
-local gears = require("gears")
 
 local librarian = {}
 
@@ -147,9 +146,7 @@ function librarian.remove_unused()
       text = "Removing not used libraries...",
     })
 
-  local libraries_path = gears.filesystem.get_configuration_dir() .. libraries_dir
-
-  local find_command = "cd " .. libraries_path .. " && "
+  local find_command = "cd " .. libraries_dir .. " && "
   find_command = find_command .. "find -mindepth 2 -maxdepth 2 -type d"
 
   awful.spawn.easy_async_with_shell(find_command, function(stdout)
@@ -163,9 +160,9 @@ function librarian.remove_unused()
             text = "Removing " .. dir .. "...",
             timeout = 1,
           })
-        remove_file_or_dir(libraries_path .. dir)
+        remove_file_or_dir(libraries_dir .. dir)
 
-        local parent_dir = libraries_path .. dir:gsub("[^/]+$", "")
+        local parent_dir = libraries_dir .. dir:gsub("[^/]+$", "")
         if (dir_is_empty(parent_dir)) then
           remove_file_or_dir(parent_dir)
         end
@@ -236,7 +233,6 @@ function librarian.init(options)
 
   if (options.library_managers) then
     for _, item in pairs(options.library_managers) do
-
       table.insert(library_managers, item)
     end
   end
