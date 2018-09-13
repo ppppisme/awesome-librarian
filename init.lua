@@ -79,55 +79,10 @@ local add_to_package_path = function(library_name)
   package.path = libraries_dir .. author .. "/?.lua;" .. package.path
 end
 
-local function install_async(library_name, options, callback)
-  local notification = notifier.notify({
-      title = "Librarian",
-      text = "Installing " .. library_name .. " library...",
-      timeout = 0,
-    })
-
-  local handler = determine_library_manager(library_name)
-
-  handler.clone(library_name, options.url, function()
-    notifier.replace_text(notification, "Librarian", library_name .. " is installed.")
-    notifier.reset_timeout(notification, 5)
-    handler.checkout(library_name, options.reference or "master")
-    callback()
-  end)
-end
-
-local function install(library_name, options)
-  local notification = notifier.notify({
-      title = "Librarian",
-      text = "Installing " .. library_name .. " library...",
-      timeout = 0,
-    })
-
-  local handler = determine_library_manager(library_name)
-
-  handler.clone(library_name, options.url)
-
-  notifier.replace_text(notification, "Librarian", library_name .. " is installed.")
-  notifier.reset_timeout(notification, 5)
-end
-
 function librarian.update(library_name)
-  local notification = notifier.notify({
-      title = "Librarian",
-      text = "Updating " .. library_name .. "...",
-      timeout = 0,
-    })
-
   local handler = determine_library_manager(library_name)
 
-  handler.pull(library_name, function(stdout)
-    local message = library_name .. " was updated."
-    if (stdout:gsub("%c", "") == "Already up to date.") then
-      message = library_name .. " is up to date."
-    end
-    notifier.replace_text(notification, "Librarian", message)
-    notifier.reset_timeout(notification, 5)
-  end)
+  handler.pull(library_name)
 end
 
 function librarian.update_all()
@@ -171,32 +126,14 @@ function librarian.remove_unused()
   end)
 end
 
-function librarian.require_async(library_name, options)
-  options = options or {}
-  libraries[library_name] = options
-  local do_after_callback = options["do_after"]
-
-  local install_callback = function()
-    local library = require(library_name)
-    if (do_after_callback) then
-      do_after_callback(library)
-    end
-  end
-
-  add_to_package_path(library_name)
-  if (not librarian.is_installed(library_name)) then
-    install_async(library_name, options, install_callback)
-
-    return nil
-  end
-
+local function install(library_name, options)
   local handler = determine_library_manager(library_name)
-
-  handler.checkout(library_name, options.reference or "master", install_callback)
+  handler.clone(library_name, options.url)
 end
 
 function librarian.require(library_name, options)
   options = options or {}
+  options.name = library_name
   libraries[library_name] = options
 
   if (not librarian.is_installed(library_name)) then
@@ -208,6 +145,7 @@ function librarian.require(library_name, options)
   add_to_package_path(library_name)
 
   local library = require(library_name)
+  -- Do not continue if handler returns false.
 
   local do_after_callback = options["do_after"]
   if (do_after_callback) then
