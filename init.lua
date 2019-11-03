@@ -22,6 +22,7 @@
 --
 
 local awful = require("awful")
+local gio = require("lgi").Gio
 
 local librarian = {}
 
@@ -134,6 +135,7 @@ end
 function librarian.require(library_name, options)
   options = options or {}
   options.name = library_name
+
   libraries[library_name] = options
 
   if (not librarian.is_installed(library_name)) then
@@ -142,12 +144,12 @@ function librarian.require(library_name, options)
 
   local handler = determine_library_manager(library_name)
   handler.checkout(library_name, options.reference or "master")
+
   add_to_package_path(library_name)
 
   local library = require(library_name)
-  -- Do not continue if handler returns false.
-
   local do_after_callback = options["do_after"]
+
   if (do_after_callback) then
     do_after_callback(library)
   end
@@ -155,10 +157,17 @@ function librarian.require(library_name, options)
   return library
 end
 
+function librarian.require_async(library_name, options)
+  gio.Async.call(function ()
+    librarian.require(library_name, options)
+  end)()
+end
+
 function librarian.init(options)
   if (not options.libraries_dir) then
     error("'libraries_dir' option is required for librarian initialization")
   end
+
   libraries_dir = options.libraries_dir or "libraries/"
 
   if (not exists(libraries_dir)) then
