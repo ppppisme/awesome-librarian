@@ -13,7 +13,7 @@ local spawn_synchronously = function(command)
 end
 
 function git.clone(library_name, url, callback)
-  local command = "git clone "
+  local command = "GIT_TERMINAL_PROMPT=0 git clone "
   url = url or "https://github.com/" .. library_name .. ".git"
   command = command .. url
 
