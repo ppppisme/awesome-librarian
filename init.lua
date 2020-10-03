@@ -29,9 +29,7 @@ local librarian = {}
 local libraries = {}
 local libraries_dir = ""
 
-local library_managers = {
-  require("librarian.git")
-}
+local library_managers = {}
 
 local notifier = {}
 
@@ -133,12 +131,18 @@ function librarian.init(_libraries_dir, options)
   end
 
   package.path = libraries_dir .. "/?/init.lua;" .. package.path
+
+  -- TODO: use console notifier to remove awesomewm as dependency.
   notifier = options.notifier or require('naughty')
 
   if (options.library_managers) then
     for _, item in pairs(options.library_managers) do
       table.insert(library_managers, item)
     end
+  else
+    library_managers = {
+      require("librarian.git")
+    }
   end
 
   -- TODO: do not init all managers, only needed ones.
