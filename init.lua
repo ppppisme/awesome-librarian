@@ -22,6 +22,7 @@
 --
 
 local awful = require("awful")
+local utils = require("librarian.utils")
 
 local librarian = {}
 
@@ -31,50 +32,16 @@ local libraries_dir = ""
 local library_managers = {
   require("librarian.git")
 }
+
 local notifier = {}
-
--- @see https://stackoverflow.com/a/40195356
-local exists = function (file)
-  local ok, _, code = os.rename(file, file)
-  if not ok then
-    if code == 13 then return true end
-  end
-  return ok
-end
-
-local spawn_synchronously = function(command)
-  local handle = io.popen(command)
-  local output = handle:read("*all")
-  output = output:gsub("%c$", "")
-  handle:close()
-
-  return output
-end
-
-local dir_is_empty = function(dir_path)
-  return spawn_synchronously("ls -A " .. dir_path) == ""
-end
-
-local remove_file_or_dir = function(path)
-  os.execute("rm -rf " .. path)
-end
-
-local has_key = function(table, wanted_key)
-  for key, _ in pairs(table) do
-    if (key == wanted_key) then
-      return true
-    end
-  end
-
-  return false
-end
 
 local function determine_library_manager(library)
   return require("librarian.git")
 end
 
-local add_to_package_path = function(library_name)
+local add_to_package_path = function (library_name)
   local author = string.match(library_name, "[^/]+")
+
   package.path = libraries_dir .. author .. "/?/init.lua;" .. package.path
   package.path = libraries_dir .. author .. "/?.lua;" .. package.path
 end
@@ -92,14 +59,14 @@ function librarian.update_all()
 end
 
 function librarian.is_installed(library_name)
-  return exists(libraries_dir .. library_name .. "/init.lua")
+  return utils.file_exists(libraries_dir .. library_name .. "/init.lua")
 end
 
 function librarian.remove_unused()
   notifier.notify({
-      title = "Librarian",
-      text = "Removing not used libraries...",
-    })
+    title = "Librarian",
+    text = "Removing not used libraries...",
+  })
 
   local find_command = "cd " .. libraries_dir .. " && "
   find_command = find_command .. "find -mindepth 2 -maxdepth 2 -type d"
@@ -109,17 +76,19 @@ function librarian.remove_unused()
     local dir_list = stdout:gsub("%./", "")
 
     for dir in dir_list:gmatch("(.-)%c") do
-      if (not has_key(libraries, dir)) then
+      if (not utils.has_key(libraries, dir)) then
         notifier.notify({
-            title = "Librarian",
-            text = "Removing " .. dir .. "...",
-            timeout = 1,
-          })
-        remove_file_or_dir(libraries_dir .. dir)
+          title = "Librarian",
+          text = "Removing " .. dir .. "...",
+          timeout = 1,
+        })
+
+        utils.remove_file_or_dir(libraries_dir .. dir)
 
         local parent_dir = libraries_dir .. dir:gsub("[^/]+$", "")
-        if (dir_is_empty(parent_dir)) then
-          remove_file_or_dir(parent_dir)
+
+        if (utils.dir_is_empty(parent_dir)) then
+          utils.remove_file_or_dir(parent_dir)
         end
       end
     end
@@ -134,6 +103,7 @@ end
 function librarian.require(library_name, options)
   options = options or {}
   options.name = library_name
+
   libraries[library_name] = options
 
   if (not librarian.is_installed(library_name)) then
@@ -159,14 +129,14 @@ function librarian.init(options)
   if (not options.libraries_dir) then
     error("'libraries_dir' option is required for librarian initialization")
   end
+
   libraries_dir = options.libraries_dir or "libraries/"
 
-  if (not exists(libraries_dir)) then
+  if (not utils.file_exists(libraries_dir)) then
     os.execute("mkdir -p " .. libraries_dir)
   end
 
   package.path = libraries_dir .. "/?/init.lua;" .. package.path
-
   notifier = options.notify or require('librarian.notifier')
 
   if (options.library_managers) then
