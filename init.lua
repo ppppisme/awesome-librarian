@@ -137,7 +137,7 @@ function librarian.init(options)
   end
 
   package.path = libraries_dir .. "/?/init.lua;" .. package.path
-  notifier = options.notify or require('librarian.notifier')
+  notifier = options.notifier or require('naughty')
 
   if (options.library_managers) then
     for _, item in pairs(options.library_managers) do
