@@ -2,7 +2,9 @@ local awful = require("awful")
 local utils = require("librarian.utils")
 
 local git = {}
+
 local libraries_dir = ""
+local is_init = false
 
 function git.clone(library_name, url, callback)
   local command = "git clone "
@@ -47,8 +49,13 @@ function git.pull(library_name, callback)
   utils.spawn_synchronously(command)
 end
 
+function git.is_init()
+  return is_init
+end
+
 function git.init(options)
   libraries_dir = options.libraries_dir or ""
+  is_init = true
 end
 
 return git

@@ -30,11 +30,23 @@ local libraries = {}
 local libraries_dir = ""
 
 local library_managers = {}
+local default_manager
 
 local notifier = {}
 
-local function determine_library_manager(library)
-  return require("librarian.git")
+local function get_library_manager(library)
+  -- TODO: logic for determining which manager is responsible for given library
+  if default_manager == nil then
+    default_manager = require("librarian.git")
+  end
+
+  if not default_manager.is_init() then
+    default_manager.init({
+      libraries_dir = libraries_dir,
+    })
+  end
+
+  return default_manager
 end
 
 local add_to_package_path = function (library_name)
@@ -45,7 +57,7 @@ local add_to_package_path = function (library_name)
 end
 
 function librarian.update(library_name)
-  local handler = determine_library_manager(library_name)
+  local handler = get_library_manager(library_name)
 
   handler.pull(library_name)
 end
@@ -94,7 +106,8 @@ function librarian.remove_unused()
 end
 
 local function install(library_name, options)
-  local handler = determine_library_manager(library_name)
+  local handler = get_library_manager(library_name)
+
   handler.clone(library_name, options.url)
 end
 
@@ -108,12 +121,12 @@ function librarian.require(library_name, options)
     install(library_name, options)
   end
 
-  local handler = determine_library_manager(library_name)
+  local handler = get_library_manager(library_name)
   handler.checkout(library_name, options.reference or "master")
   add_to_package_path(library_name)
 
   local library = require(library_name)
-  -- Do not continue if handler returns false.
+  -- do not continue if handler returns false
 
   local do_after_callback = options["do_after"]
   if (do_after_callback) then
@@ -132,7 +145,7 @@ function librarian.init(_libraries_dir, options)
 
   package.path = libraries_dir .. "/?/init.lua;" .. package.path
 
-  -- TODO: use console notifier to remove awesomewm as dependency.
+  -- TODO: use console notifier to remove awesomewm as dependency
   notifier = options.notifier or require('naughty')
 
   if (options.library_managers) then
@@ -143,11 +156,6 @@ function librarian.init(_libraries_dir, options)
     library_managers = {
       require("librarian.git")
     }
-  end
-
-  -- TODO: do not init all managers, only needed ones.
-  for _, item in pairs(library_managers) do
-    item.init({libraries_dir = libraries_dir})
   end
 end
 
