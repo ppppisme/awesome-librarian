@@ -125,12 +125,8 @@ function librarian.require(library_name, options)
   return library
 end
 
-function librarian.init(options)
-  if (not options.libraries_dir) then
-    error("'libraries_dir' option is required for librarian initialization")
-  end
-
-  libraries_dir = options.libraries_dir or "libraries/"
+function librarian.init(_libraries_dir, options)
+  libraries_dir = _libraries_dir
 
   if (not utils.file_exists(libraries_dir)) then
     os.execute("mkdir -p " .. libraries_dir)
